@@ -1,5 +1,3 @@
-
-using System.Net;
 using OpenPop.Pop3;
 namespace my_space
 {
@@ -16,21 +14,12 @@ namespace my_space
         /// <param name="password">пароль пользователя для аутентификации</param>
         /// <param name="filename">путь к файлу для четения и записи новых и старых писем</param>
 
-        public static void Check_mail(string username, string password, string hostname = "pop.mail.ru", int port = 995, bool useSsl = true, string filename = "/Users/vladimirgoncarov/Projects/POP3.Client/Sample.txt")
+        public static void Check_mail(string username, string password, string hostname = "pop.mail.ru", int port = 995, bool useSsl = true, string filename = "path")
         {
-            if (hostname == null)
-                throw new ArgumentNullException("hostname");
-
-            if (hostname.Length == 0)
-                throw new ArgumentException("hostname is empty", "hostname");
-
-            if (port > IPEndPoint.MaxPort || port < IPEndPoint.MinPort)
-                throw new ArgumentOutOfRangeException("port");
-
-            if (username == null)
+            if (string.IsNullOrEmpty(username))
                 throw new ArgumentNullException("username");
 
-            if (password == null)
+            if (string.IsNullOrEmpty(password))
                 throw new ArgumentNullException("password");
 
             using (Pop3Client client = new Pop3Client())
@@ -38,15 +27,16 @@ namespace my_space
                 try
                 {
                     client.Connect(hostname, port, useSsl);
-                    client.Authenticate(username, password);
+                    if(client.Connected)
+                        client.Authenticate(username, password);
                     //получаем список старых писем из файла
                     List<string> oldMesUid = get_oldMesUid(filename);
                     //получаем все письма от сервера
                     List<string> newMesUid = client.GetMessageUids();
                     //псисок старых писем пуст, то выводим количество новых писем
-                    if (oldMesUid == null)
+                    if (oldMesUid.Count == 0)
                     {
-                        Console.WriteLine("Количество новых сообщений " + newMesUid.Count);
+                        Console.WriteLine(String.Format($"Количество новых сообщений {newMesUid.Count}"));
                         return;
                     }
                     //если список старых писем не пуст, то из нового списка удаляем старый список чтобы узнать количество новых сообщений
@@ -55,11 +45,11 @@ namespace my_space
                         if(newMesUid.Contains(str))
                             newMesUid.Remove(str);
                     }
-                    Console.WriteLine("Количество новых сообщений " + newMesUid.Count);
+                    Console.WriteLine(String.Format($"Количество новых сообщений {newMesUid.Count}"));
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("Exception: " + e.Message);
+                    Console.WriteLine(String.Format($"Exception: {e.Message}"));
                 }
             }
         }
@@ -68,8 +58,12 @@ namespace my_space
         /// </summary>
         /// <param name="filename">путь к файлу из готорого будет считываться текст</param>
         /// <returns></returns>
-        static public List<string>? get_oldMesUid(string filename)
+        static public List<string> get_oldMesUid(string filename)
         {
+            if(!File.Exists(filename))
+                throw new FileNotFoundException("filename");
+
+
             List<string> oldMesUid = new List<string>();
             String line;
             try
@@ -86,8 +80,8 @@ namespace my_space
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception: " + e.Message);
-                return null;
+                Console.WriteLine(String.Format($"Exception: {e.Message}"));
+                return new List<string>();
             }
         }
 
@@ -98,6 +92,8 @@ namespace my_space
         /// <param name="filename">путь к файлу для записи</param>
         static public void set_newMesUid(List<string> newMesUid, string filename)
         {
+            if (!Directory.Exists(filename))
+                throw new DirectoryNotFoundException("filename");
             try
             {
                 StreamWriter sw = new StreamWriter(filename);
@@ -107,14 +103,14 @@ namespace my_space
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception: " + e.Message);
+                Console.WriteLine(String.Format($"Exception: {e.Message}"));
             }
         }
 
         static void Main(string[] args)
         {
             string login="login", password="password";
-            Check_mail(login, password);        
+            Check_mail(login, password);
         }
     }
 }
